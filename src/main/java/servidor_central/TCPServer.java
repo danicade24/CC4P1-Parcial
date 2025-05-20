@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.net.ServerSocket;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.io.IOException;
 /**
  *
  * @author daniela
@@ -63,6 +64,26 @@ public class TCPServer {
     }
     
     public interface OnMessageReceived {
-        public void messageReceived(String message);
+        public void messageReceived(String message, int clientId);
     }
+    
+    public void stopServer() {
+    running = false;
+    try {
+        if (serverSocket != null && !serverSocket.isClosed()) {
+            serverSocket.close(); // fuerza salida del .accept()
+        }
+    } catch (IOException e) {
+        System.out.println("Error al cerrar el servidor: " + e.getMessage());
+    }
+
+    // Detener todos los hilos de clientes
+    for (int i = 0; i <= nCli; i++) {
+        if (sendCli[i] != null) {
+            sendCli[i].stopClient(); // método ya existente
+        }
+    }
+    System.out.println("Servidor detenido correctamente.");
+}
+
 }

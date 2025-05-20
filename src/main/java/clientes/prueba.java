@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package clientes;
 
 import java.io.BufferedReader;
@@ -18,8 +14,8 @@ public class prueba {
         try(BufferedReader br = new BufferedReader(new FileReader(file))){
             String line;
             while((line = br.readLine()) != null) {
-                String[] partes = line.split("\\|");
-//                String[] partes = linea.split("\\s*\\|\\s*");  // Perfecto para tu caso
+//                String[] partes = line.split("\\|");
+                String[] partes = line.split("\\s*\\|\\s*");  
 //                System.out.println(line);
                 String idCliente = partes[0].trim(); 
                 String nombreCliente = partes[1].trim(); 

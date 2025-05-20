@@ -22,6 +22,7 @@ class TCPServerThread extends Thread{
     private TCPServer.OnMessageReceived messageListener = null;
     private String message;
     TCPServerThread[] allCli;
+    public int state = 0;   //0:menu, 1:constar saldo, 2: transferir dinero
     
     public TCPServerThread(Socket client, TCPServer tcpServer, int clientId, TCPServerThread[] allCli) {
         this.client = client;
@@ -46,14 +47,15 @@ class TCPServerThread extends Thread{
                         + "A continuación elija la operación que desa realizar\n"
                         + "1) Consultar Saldo\n"
                         + "2) Transferir Fondos\n"
-                        + "Ingrese 1 o 2");
+                        + "3) Salir\n"
+                        + "Ingrese una opcion valida (1, 2 o 3)");
                 messageListener = tcpServer.getMessageLisstener();
                 in = new BufferedReader(new InputStreamReader(client.getInputStream()));
-                while (running) {                    
+                while (running) {  
                     message = in.readLine();
                     
                     if(message != null && messageListener != null) {
-                        messageListener.messageReceived(message);
+                        messageListener.messageReceived(message, clientId);
                     }
                     
                     message = null;

@@ -1,2 +1,10 @@
-101 | 1 | 1500.00 | Ahorros
-102 | 2 | 3200.50 | Corriente
+101 | 1  | 1100.00 | Ahorros
+102 | 2  | 3600.50 | Corriente
+103 | 3  | 800.00  | Ahorros
+104 | 4  | 950.75  | Corriente
+105 | 5  | 3000.00 | Ahorros
+106 | 6  | 1200.00 | Corriente
+107 | 7  | 2100.00 | Ahorros
+108 | 8  | 500.00  | Corriente
+109 | 9  | 2750.00 | Ahorros
+110 | 10 | 1500.00 | Corriente

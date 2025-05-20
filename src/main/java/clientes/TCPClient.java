@@ -49,10 +49,13 @@ public class TCPClient {
                 in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 while(mRun) {
                     serverMsg = in.readLine();
-                    if(serverMsg != null && mMessageListener != null) {
+                    if (serverMsg == null) {
+                        System.out.println("El servidor cerró la conexión.");
+                        stopClient();
+                    }
+                    if (mMessageListener != null) {
                         mMessageListener.messageReceived(serverMsg);
                     }
-                    serverMsg = null;
                 }
             } catch (Exception e) {
                 System.out.println("TCP"+ "C: Error"+ e);
