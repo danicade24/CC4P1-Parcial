@@ -59,7 +59,7 @@ public class Particionador {
     }
     
     public static void replicar(String carpeta, String nombreBase) throws IOException {
-        for (int r = 1; r <= 3; r++) {
+        for (int r = 1; r < 3; r++) {
             Path original = Paths.get("src/main/java/partitions/" + carpeta + "/" + nombreBase + ".txt");
             Path destino = Paths.get("src/main/java/partitions/" + carpeta + "/" + nombreBase + "_r" + r + ".txt");
             Files.copy(original, destino, StandardCopyOption.REPLACE_EXISTING);
@@ -79,9 +79,9 @@ public class Particionador {
     public static void main(String[] args) {
         try {
             particionarYReplicarTodo(5);  // O 4, 5, lo que quieras
-            System.out.println("✅ Particiones y réplicas generadas correctamente.");
+            System.out.println("Particiones y réplicas generadas correctamente.");
         } catch (IOException e) {
-            System.err.println("❌ Error: " + e.getMessage());
+            System.err.println("Error: " + e.getMessage());
         }
     }
 }

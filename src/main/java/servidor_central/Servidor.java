@@ -3,7 +3,8 @@ package servidor_central;
 import java.net.Socket;
 import java.net.ServerSocket;
 import java.io.*;
-import java.util.Scanner;
+import java.util.*;
+
 /**
  *
  * @author daniela
@@ -35,7 +36,7 @@ public class Servidor {
 
             }
         ).start();
-        
+        inicializarMapa();
         System.out.println("Servidor iniciado. Escribe 'stop' para detenerlo.");
         
         String exit = "n";
@@ -103,7 +104,7 @@ public class Servidor {
                     client.sendMessage("Formato incorrecto. Use: ID_ORIGEN,ID_DESTINO,MONTO");
                 }
                 client.state = 0;
-                client.sendMessage("¿Desea realizar otra operación? Ingrese 1 o 2:");
+                client.sendMessage("¿Desea realizar otra operación? Ingrese 1 o 2 o 3:");
                 break;
         }
     }
@@ -114,12 +115,74 @@ public class Servidor {
         }
     }
     
-    // simulamos las operaciones
-    void Consultar_Saldo(String id_cuenta, TCPServerThread client) {
-        client.sendMessage("Saldo de la cuenta " + id_cuenta + " es: 1500.00 (simulado)");
+    void Consultar_Saldo(String id_cuenta_str, TCPServerThread client) {
+        try {
+            int idCuenta = Integer.parseInt(id_cuenta_str);
+            int puertoNodo = obtenerPuertoNodo(idCuenta);
+
+            if (puertoNodo == -1) {
+                client.sendMessage("ERROR | Cuenta fuera de rango");
+                return;
+            }
+
+            try (Socket nodo = new Socket("localhost", puertoNodo);
+                 PrintWriter out = new PrintWriter(nodo.getOutputStream(), true);
+                 BufferedReader in = new BufferedReader(new InputStreamReader(nodo.getInputStream()))) {
+
+                out.println("CONSULTAR_SALDO|" + idCuenta);
+                String respuesta = in.readLine();
+                client.sendMessage(respuesta);
+
+            } catch (IOException e) {
+                client.sendMessage("ERROR | Nodo inalcanzable: " + e.getMessage());
+            }
+
+        } catch (NumberFormatException e) {
+            client.sendMessage("ERROR | ID de cuenta inválido.");
+        }
     }
     
-    void Transferir_Fondos(String id_cuenta_origen, String id_cuenta_destino, double monto, TCPServerThread client){
-        client.sendMessage("Transferencia de " + monto + " de " + id_cuenta_origen + " a " + id_cuenta_destino + " realizada (simulada)");
+    int obtenerPuertoNodo(int idCuenta) {
+        for (Map.Entry<Integer, Integer> entry : mapaNodos.entrySet()) {
+            int rangoInicio = entry.getKey();
+            if (idCuenta >= rangoInicio && idCuenta < rangoInicio + 100) {
+                return entry.getValue();
+            }
+        }
+        return -1; // No encontrado
     }
+
+    
+    void Transferir_Fondos(String id_cuenta_origen, String id_cuenta_destino, double monto, TCPServerThread client){
+        try {
+            int idOrigen = Integer.parseInt(id_cuenta_origen);
+            int puertoNodo = obtenerPuertoNodo(idOrigen);
+            
+            if (puertoNodo == -1) {
+                client.sendMessage("ERROR | No se encuentra el nodo para cuenta de origen");
+            }
+            
+            try (Socket nodo = new Socket("localhost", puertoNodo);
+                 PrintWriter out = new PrintWriter(nodo.getOutputStream(), true);
+                 BufferedReader in = new BufferedReader(new InputStreamReader(nodo.getInputStream()))) {
+                
+                out.println("TRANSFERIR_FONDOS|" + id_cuenta_origen + "|" + id_cuenta_destino + "|" + monto);
+                String respuesta = in.readLine();
+                client.sendMessage(respuesta);
+            } catch (IOException e) {
+                client.sendMessage("ERROR | No se puede alcanzar el nodo : " + e.getMessage());
+            }
+        } catch (NumberFormatException e) {
+            client.sendMessage("ERROR | ID inválido");
+        }
+    }
+    
+    Map<Integer, Integer> mapaNodos = new HashMap<>();
+    
+    void inicializarMapa() {
+        mapaNodos.put(101, 6001);
+        mapaNodos.put(105, 6002);
+        mapaNodos.put(108, 6003);
+    }
+    
 }

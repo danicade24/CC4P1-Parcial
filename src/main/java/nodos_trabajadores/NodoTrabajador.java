@@ -4,82 +4,107 @@ import model.*;
 import java.util.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.net.Socket;
+import java.net.ServerSocket;
+import java.util.Scanner;
+import java.io.*;
+
 /**
  *
  * @author daniela
  */
 public class NodoTrabajador {
+    private final int puerto;  
+    private final String rutaCuentas;
+    private final String rutaTransacciones;
+    
     private Map<String, Cuenta> cuentas;
     private List<Transaccion> transacciones;
-    private String rutaCuentas;
-    private String rutaTransacciones;
 
-    public NodoTrabajador(String carpeta) {
-        this.rutaCuentas = "src/main/java/data/cuentas.txt";
-        this.rutaTransacciones = "src/main/java/data/transacciones.txt";
-
+    public NodoTrabajador(int puerto, String archivoCuentas, String archivoTransacciones) {
+        this.puerto = puerto;
+        this.rutaCuentas = archivoCuentas;
+        this.rutaTransacciones = archivoTransacciones;
+        
         this.cuentas = RepositorioDatos.cargarCuentas(rutaCuentas);
         this.transacciones = RepositorioDatos.cargarTransacciones(rutaTransacciones);
     }
+        
+    public void iniciarNodo() {
+        System.out.println("Nodo iniciado en el puerto " + puerto);
+        System.out.println("Usando el archivov " + rutaCuentas);
+        
+        try (ServerSocket serverSocket = new ServerSocket(puerto)) {
+            while (true) {
+                Socket socket = serverSocket.accept();
 
-    public String procesarSolicitud(String solicitud) {
-        String[] partes = solicitud.split("\\s*\\|\\s*");
+                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 
-        switch (partes[0]) {
-            case "CONSULTAR_SALDO":
-                System.out.println("-----------OPERACIÓN : CONSULTAR SALDO----------");
-                return consultarSaldo(partes[1]);
+                String solicitud = in.readLine();
+                System.out.println("Solicitud recibida: " + solicitud);
 
-            case "TRANSFERIR_FONDOS":
-                System.out.println("-----------OPERACIÓN : TRANSFERIR FONDOS----------");
-                return transferir(partes[1], partes[2], Double.parseDouble(partes[3]));
+                String respuesta = procesarSolicitud(solicitud);
+                out.println(respuesta);
 
-            case "ARQUEO":
-                System.out.println("-----------OPERACIÓN : ARQUEO----------");
-                return calcularTotal();
-
-            default:
-                return "ERROR|Comando no reconocido";
+                socket.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
-    private String consultarSaldo(String idCuenta) {
-        Cuenta c = cuentas.get(idCuenta);
-        return (c != null) ? "SALDO |" + c.getSaldo() : "ERROR | Cuenta no encontrada";
+    private String procesarSolicitud(String solicitud) {
+        if (solicitud.startsWith("CONSULTAR_SALDO")) {
+            String[] partes = solicitud.split("\\|");
+            return consultarSaldo(partes[1].trim());
+        } else if (solicitud.startsWith("TRANSFERIR_FONDOS")) {
+            String[] partes = solicitud.split("\\|");
+            return transferir(partes[1].trim(), partes[2].trim(), Double.parseDouble(partes[3].trim()));
+        }
+        return "ERROR|Operación no reconocida";
     }
 
+    private String consultarSaldo(String idCuentaBuscada) {
+        Cuenta c = cuentas.get(idCuentaBuscada);
+        return (c != null) ? "SALDO | " + c.getSaldo() : "ERROR | CUENTA NO ENCONTRADA";
+    }
+    
     private String transferir(String origen, String destino, double monto) {
         Cuenta cOrigen = cuentas.get(origen);
         Cuenta cDestino = cuentas.get(destino);
 
-        if (cOrigen == null || cDestino == null)
-            return "ERROR | Cuenta no encontrada";
+        if (cOrigen == null)
+            return "ERROR|Cuenta origen no encontrada";
+
+        if (cDestino == null)
+            return "ERROR|Cuenta destino no encontrada";
 
         if (!cOrigen.retirar(monto))
-            return "ERROR | Saldo insuficiente";
+            return "ERROR|Saldo insuficiente";
 
         cDestino.depositar(monto);
 
         String idTrans = String.valueOf(transacciones.size() + 1);
         String fechaHora = LocalDateTime.now()
-                                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+
         transacciones.add(new Transaccion(idTrans, origen, destino, monto, fechaHora, "Confirmada"));
 
+        // Guardar los cambios
         RepositorioDatos.guardarCuentas(rutaCuentas, cuentas);
         RepositorioDatos.guardarTransacciones(rutaTransacciones, transacciones);
 
-        return "CONFIRMACION | Transferencia realizada";
-    }
-
-    private String saldoRestante(String origen) {
-        Cuenta cOrigen = cuentas.get(origen);
-        double sRestante = cOrigen.getSaldo();
-        return "SALDO RESTANTE | " + sRestante;
+        return "CONFIRMACION | Transferencia realizada de " + origen + " a " + destino + " por " + monto;
     }
     
-    private String calcularTotal() {
-        double total = cuentas.values().stream().mapToDouble(Cuenta::getSaldo).sum();
-        return "TOTAL |" + total;
-    }
-}
+    public static void main(String[] args) {
+        int puerto = 6001;
+        String archivoCuentas = "src/main/java/partitions/cuentas/parte2.1_r1.txt";
+        String archivoTransacciones = "src/main/java/data/transacciones.txt";
 
+        NodoTrabajador nodo = new NodoTrabajador(puerto, archivoCuentas, archivoTransacciones);
+        nodo.iniciarNodo();
+    }
+
+}

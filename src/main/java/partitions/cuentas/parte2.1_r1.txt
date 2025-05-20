@@ -1,2 +1,2 @@
-105 | 5  | 3000.00 | Ahorros
-110 | 10 | 1500.00 | Corriente
+110 | 10 | 2500.0 | Corriente
+105 | 5 | 2000.0 | Ahorros
