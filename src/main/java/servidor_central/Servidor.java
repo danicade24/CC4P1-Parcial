@@ -1,7 +1,6 @@
 package servidor_central;
 
 import java.net.Socket;
-import java.net.ServerSocket;
 import java.io.*;
 import java.util.*;
 import org.json.*;
@@ -59,7 +58,24 @@ public class Servidor {
     }
     
     void ReceiveServer(String message, int clientId) {
+        System.out.println("Mensaje recibido del cliente: " + message);
         TCPServerThread client = mTCPServer.getClients()[clientId];
+
+        if (message == null || message.trim().isEmpty()) {
+            client.sendMessage("ERROR|Mensaje vacío");
+            return;
+        }
+
+        if (message.startsWith("CONSULTAR_SALDO|") || message.startsWith("TRANSFERIR_FONDOS|")) {
+            System.out.println("✅ Procesando operación directa");
+            String respuesta = procesarOperacion(message);
+            System.out.println("✅ Respuesta enviada al cliente: " + respuesta);
+            client.sendMessage(respuesta);
+            return;
+        }
+
+        System.out.println("⛔ El mensaje no fue procesado directamente. Sigue al menú interactivo");
+
         switch (client.state) {
             case 0:
                 String opcion = message.trim();

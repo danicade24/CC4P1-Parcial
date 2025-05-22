@@ -14,7 +14,7 @@ public class TCPServer {
     public static final int SERVERPORT = 5000;
     private final OnMessageReceived messageListener;
     private boolean running = false;
-    private final TCPServerThread[] sendCli = new TCPServerThread[50];
+    private final TCPServerThread[] sendCli = new TCPServerThread[100];
     private ServerSocket serverSocket;
 
     public TCPServer(OnMessageReceived messageListener) {
