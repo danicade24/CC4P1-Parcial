@@ -128,7 +128,8 @@ public class NodoTrabajador {
                 }
 
                 // Guardar cuentas modificadas (copia local por nodo)
-                RepositorioDatos.guardarCuentas("src/main/java/data/cuentas_actualizadas_" + puerto + ".txt", cuentas);
+                //RepositorioDatos.guardarCuentas("src/main/java/data/cuentas_actualizadas_" + puerto + ".txt", cuentas);
+                guardarCuentasPorArchivos("src/main/java/partitions/cuentas/nodo" + (puerto - 6000));
 
                 // Registrar transacción
                 registrarTransaccion(idOrigen, idDestino, monto);
@@ -165,4 +166,38 @@ public class NodoTrabajador {
             System.err.println("Error al registrar transacción: " + e.getMessage());
         }
     }
+
+    private void guardarCuentasPorArchivos(String carpetaNodo) {
+        File dir = new File(carpetaNodo);
+        File[] archivos = dir.listFiles((d, nombre) -> nombre.endsWith(".txt"));
+        if (archivos == null) return;
+    
+        for (File archivo : archivos) {
+            Map<String, Cuenta> cuentasParaEsteArchivo = new HashMap<>();
+            List<String> ids = extraerIdsDesdeArchivo(archivo.getPath());
+            for (String id : ids) {
+                if (cuentas.containsKey(id)) {
+                    cuentasParaEsteArchivo.put(id, cuentas.get(id));
+                }
+            }
+            RepositorioDatos.guardarCuentas(archivo.getPath(), cuentasParaEsteArchivo);
+        }
+    }
+    
+    private List<String> extraerIdsDesdeArchivo(String ruta) {
+        List<String> ids = new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new FileReader(ruta))) {
+            String linea;
+            while ((linea = br.readLine()) != null) {
+                String[] partes = linea.split("\\|");
+                if (partes.length >= 1) {
+                    ids.add(partes[0].trim());
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error leyendo IDs desde archivo: " + e.getMessage());
+        }
+        return ids;
+    }
+    
 }
