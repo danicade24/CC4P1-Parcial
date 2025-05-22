@@ -1,7 +1,6 @@
 package clientes;
 
 import java.util.Scanner;
-import clientes.TCPClient;
 /**
  *
  * @author daniela

@@ -10,21 +10,18 @@ import java.io.IOException;
  * @author daniela
  */
 public class TCPServer {
-    private String message;
     int nCli = 0;
     public static final int SERVERPORT = 5000;
-    private OnMessageReceived messageListener = null;
+    private final OnMessageReceived messageListener;
     private boolean running = false;
-    TCPServerThread[] sendCli = new TCPServerThread[10];
-    PrintWriter mOut;
-    BufferedReader in;
-    ServerSocket serverSocket;
+    private final TCPServerThread[] sendCli = new TCPServerThread[50];
+    private ServerSocket serverSocket;
 
     public TCPServer(OnMessageReceived messageListener) {
         this.messageListener = messageListener;
     }
     
-    public OnMessageReceived getMessageLisstener() {
+    public OnMessageReceived getMessageListener() {
         return this.messageListener;
     }
     
@@ -43,20 +40,36 @@ public class TCPServer {
             
             while(running) {
                 Socket client = serverSocket.accept();
-                System.out.println("TCP Server"+" S : Connecting...");
+//                System.out.println("TCP Server"+" S : Connecting...");
                 System.out.println("Bienvenido a su Banco");
                 nCli++;
-                System.out.println("Connected Client #" + nCli);
                 sendCli[nCli] = new TCPServerThread(client, this, nCli, sendCli);
                 Thread t = new Thread(sendCli[nCli]);
                 t.start();
-                System.out.println("New client connected: " + nCli + " connected clients");
+                System.out.println("Nuevo cliente conectado: #" + nCli);
             }
         } catch(Exception e){
-            System.out.println("TCP Server " + "S: Error " + e);
-        } finally {
-            
+            System.out.println(" Error en servidor: " + e.getMessage());
+        } 
+    }
+    
+    public void stopServer() {
+        running = false;
+        try {
+            if (serverSocket != null && !serverSocket.isClosed()) {
+                serverSocket.close(); // fuerza salida del .accept()
+            }
+        } catch (IOException e) {
+            System.out.println("Error al cerrar el servidor: " + e.getMessage());
         }
+
+        // Detener todos los hilos de clientes
+        for (int i = 0; i <= nCli; i++) {
+            if (sendCli[i] != null) {
+                sendCli[i].stopClient(); // método ya existente
+            }
+        }
+        System.out.println("Servidor detenido correctamente.");
     }
     
     public TCPServerThread[] getClients(){
@@ -66,24 +79,4 @@ public class TCPServer {
     public interface OnMessageReceived {
         public void messageReceived(String message, int clientId);
     }
-    
-    public void stopServer() {
-    running = false;
-    try {
-        if (serverSocket != null && !serverSocket.isClosed()) {
-            serverSocket.close(); // fuerza salida del .accept()
-        }
-    } catch (IOException e) {
-        System.out.println("Error al cerrar el servidor: " + e.getMessage());
-    }
-
-    // Detener todos los hilos de clientes
-    for (int i = 0; i <= nCli; i++) {
-        if (sendCli[i] != null) {
-            sendCli[i].stopClient(); // método ya existente
-        }
-    }
-    System.out.println("Servidor detenido correctamente.");
-}
-
 }

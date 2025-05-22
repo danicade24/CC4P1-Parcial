@@ -1,2 +1,0 @@
-1 | Juan Pérez     | juan@email.com      | 987654321
-6 | Carla Díaz     | carla@email.com     | 944445566

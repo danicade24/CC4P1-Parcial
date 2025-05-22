@@ -19,7 +19,7 @@ public class RepositorioDatos {
         try(BufferedReader br = new BufferedReader(new FileReader(ruta))) {
             String linea;
             while((linea = br.readLine()) != null) {
-                String[] p = linea.split("\\s*\\|\\s*");
+                String[] p = linea.split("\\|");
                 if(p.length == 4) {
                     Cliente c = new Cliente(
                             p[0].trim(), 
@@ -41,7 +41,7 @@ public class RepositorioDatos {
         try (BufferedReader br = new BufferedReader(new FileReader(ruta))) {
             String linea;
             while ((linea = br.readLine()) != null) {
-                String[] p = linea.split("\\s*\\|\\s*");
+                String[] p = linea.split("\\|");
                 if (p.length == 4) {
                     Cuenta c = new Cuenta(
                         p[0].trim(), // ID_CUENTA
@@ -65,7 +65,7 @@ public class RepositorioDatos {
         try (BufferedReader br = new BufferedReader(new FileReader(ruta))) {
             String linea;
             while ((linea = br.readLine()) != null) {
-                String[] p = linea.split("\\s*\\|\\s*");
+                String[] p = linea.split("\\|");
                 if (p.length == 6) {
                     Transaccion t = new Transaccion(
                         p[0].trim(),  // ID_TRANSACC

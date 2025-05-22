@@ -1,0 +1,41 @@
+[
+    {
+        "particionesClientes": [
+            "parte1.1",
+            "parte1.2",
+            "parte1.3"
+        ],
+        "puerto": 6001,
+        "particionesCuentas": [
+            "parte2.1",
+            "parte2.2",
+            "parte2.3"
+        ]
+    },
+    {
+        "particionesClientes": [
+            "parte1.1",
+            "parte1.2",
+            "parte1.3"
+        ],
+        "puerto": 6002,
+        "particionesCuentas": [
+            "parte2.1",
+            "parte2.2",
+            "parte2.3"
+        ]
+    },
+    {
+        "particionesClientes": [
+            "parte1.1",
+            "parte1.2",
+            "parte1.3"
+        ],
+        "puerto": 6003,
+        "particionesCuentas": [
+            "parte2.1",
+            "parte2.2",
+            "parte2.3"
+        ]
+    }
+]

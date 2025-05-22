@@ -1,2 +1,0 @@
-3 | Luis Ramos     | luis@email.com      | 912345678
-8 | Rosa Ríos      | rosa@email.com      | 966667788

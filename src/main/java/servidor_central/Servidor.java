@@ -4,6 +4,7 @@ import java.net.Socket;
 import java.net.ServerSocket;
 import java.io.*;
 import java.util.*;
+import org.json.*;
 
 /**
  *
@@ -12,6 +13,8 @@ import java.util.*;
 public class Servidor {
     TCPServer mTCPServer;
     Scanner sc;
+    private static final String CONFIG_PATH = "src/main/java/config/config_nodos.json";
+    Map<String, List<Integer>> mapaParticiones = new HashMap<>();
     
     public static void main(String[] args) {
         Servidor objSer = new Servidor();
@@ -19,6 +22,8 @@ public class Servidor {
     }
     
     void init() {
+        cargarAsignacionesDesdeJson();
+        // Inicia el servidor TCP
         new Thread(
             new Runnable() {
                 @Override
@@ -36,59 +41,49 @@ public class Servidor {
 
             }
         ).start();
-        inicializarMapa();
-        System.out.println("Servidor iniciado. Escribe 'stop' para detenerlo.");
         
-        String exit = "n";
+        System.out.println("Servidor iniciado. Escribe 'stop' para detenerlo.");
         sc = new Scanner(System.in);
-        System.out.println("Flag Server 01");
-        while (!exit.equals("s")) {
+        String exit;
+        
+        while (true) {
             exit = sc.nextLine();
-
-            if (exit.equals("stop")) {
+            if (exit.equalsIgnoreCase("stop")) {
                 if (mTCPServer != null) {
                     mTCPServer.stopServer();
                 }
                 break; // rompe el bucle
             }
-
             SendServer(exit); // sigue funcionando para enviar a clientes
         }
-        System.out.println("Flag Server 02");
     }
     
     void ReceiveServer(String message, int clientId) {
-//        System.out.println("Client chose option " + message);
-//        if(message.equals("1")){
-//            System.out.println("ACÁ IMPLEMENTARE LA LOGICA DE LA PRIMERA OPCION");
-//            Consultar_Saldo("1");
-//        } else if(message.equals("2")){
-//            System.out.println("ACÁ IMPLEMENTARE LA LOGICA DE LA SEGUNDA OPCION");
-//            Transferir_Fondos("", "", 0);
-//        } else {
-//            System.out.println("OPCION INVALIDA");
-//        }
         TCPServerThread client = mTCPServer.getClients()[clientId];
         switch (client.state) {
             case 0:
-                if(message.equals("1")){
+                String opcion = message.trim();
+                if (opcion.equals("1")) {
                     client.state = 1;
                     client.sendMessage("Ingrese el ID de su cuenta:");
-                } else if(message.equals("2")){
+                } else if (opcion.equals("2")) {
                     client.state = 2;
                     client.sendMessage("Ingrese: ID_ORIGEN,ID_DESTINO,MONTO (ej. 101,102,500.00)");
-                } else if(message.equals("3")) {
+                } else if (opcion.equals("3")) {
                     client.sendMessage("Gracias por usar el banco. Cerrando sesión...");
                     client.stopClient();
                 } else {
-                    client.sendMessage("OPCION INVALIDA");
+                    client.sendMessage("Opción inválida. Ingrese 1, 2 o 3:");
                 }
                 break;
+
             case 1:
-                Consultar_Saldo(message, client);
+                String respuesta = procesarOperacion("CONSULTAR_SALDO|" + message.trim());
+                client.sendMessage(respuesta);
                 client.state = 0;
-                client.sendMessage("¿Desea realizar otra operación? Ingrese 1 o 2 o 3:");
+                client.sendMessage("¿Desea realizar otra operación? Ingrese 1, 2 o 3:");
                 break;
+                
             case 2:
                 String[] datos = message.split(",");
                 if (datos.length == 3) {
@@ -96,7 +91,9 @@ public class Servidor {
                         String origen = datos[0].trim();
                         String destino = datos[1].trim();
                         double monto = Double.parseDouble(datos[2].trim());
-                        Transferir_Fondos(origen, destino, monto, client);
+                        String operacion = "TRANSFERIR_FONDOS|" + origen + "|" + destino + "|" + monto;
+                        respuesta = procesarOperacion(operacion);
+                        client.sendMessage(respuesta);
                     } catch (NumberFormatException e) {
                         client.sendMessage("Monto inválido. Intente de nuevo.");
                     }
@@ -104,7 +101,7 @@ public class Servidor {
                     client.sendMessage("Formato incorrecto. Use: ID_ORIGEN,ID_DESTINO,MONTO");
                 }
                 client.state = 0;
-                client.sendMessage("¿Desea realizar otra operación? Ingrese 1 o 2 o 3:");
+                client.sendMessage("¿Desea realizar otra operación? Ingrese 1, 2 o 3:");
                 break;
         }
     }
@@ -115,74 +112,87 @@ public class Servidor {
         }
     }
     
-    void Consultar_Saldo(String id_cuenta_str, TCPServerThread client) {
-        try {
-            int idCuenta = Integer.parseInt(id_cuenta_str);
-            int puertoNodo = obtenerPuertoNodo(idCuenta);
+     public void cargarAsignacionesDesdeJson() {
+        try (InputStream is = new FileInputStream(CONFIG_PATH)) {
+            JSONArray nodos = new JSONArray(new JSONTokener(is));
+            for (int i = 0; i < nodos.length(); i++) {
+                JSONObject nodo = nodos.getJSONObject(i);
+                int puerto = nodo.getInt("puerto");
 
-            if (puertoNodo == -1) {
-                client.sendMessage("ERROR | Cuenta fuera de rango");
-                return;
+                for (int j = 0; j < 2; j++) {
+                    String prefijo = (j == 0) ? "particionesClientes" : "particionesCuentas";
+                    JSONArray partes = nodo.getJSONArray(prefijo);
+                    for (int k = 0; k < partes.length(); k++) {
+                        String clave = partes.getString(k);
+                        if (!mapaParticiones.containsKey(clave)) {
+                            mapaParticiones.put(clave, new ArrayList<Integer>());
+                        }
+                        mapaParticiones.get(clave).add(puerto);
+                    }
+                }
             }
 
-            try (Socket nodo = new Socket("localhost", puertoNodo);
-                 PrintWriter out = new PrintWriter(nodo.getOutputStream(), true);
-                 BufferedReader in = new BufferedReader(new InputStreamReader(nodo.getInputStream()))) {
+            System.out.println("Configuración de nodos cargada correctamente.");
+        } catch (IOException e) {
+            System.err.println("Error cargando configuración: " + e.getMessage());
+        }
+    }
 
-                out.println("CONSULTAR_SALDO|" + idCuenta);
+    public String procesarOperacion(String operacion) {
+        try {
+            if (operacion.startsWith("CONSULTAR_SALDO")) {
+                String[] partes = operacion.split("\\|");
+                String idCuenta = partes[1].trim();
+                String claveParticion = obtenerClaveParticion("parte1", idCuenta);
+                return reenviarAServidorDisponible(claveParticion, operacion);
+            } else if (operacion.startsWith("TRANSFERIR_FONDOS")) {
+                String[] partes = operacion.split("\\|");
+                String idOrigen = partes[1].trim();
+                String claveParticion = obtenerClaveParticion("parte2", idOrigen);
+                return reenviarAServidorDisponible(claveParticion, operacion);
+            }
+        } catch (Exception e) {
+            return "ERROR|Formato incorrecto: " + e.getMessage();
+        }
+        return "ERROR|Comando no reconocido";
+    }
+
+    public String reenviarAServidorDisponible(String claveParticion, String mensaje) {
+        List<Integer> puertos = mapaParticiones.getOrDefault(claveParticion, Collections.emptyList());
+
+        for (int i = 0; i < puertos.size(); i++) {
+            int puerto = puertos.get(i);
+            try (Socket socket = new Socket("localhost", puerto);
+                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+
+                out.println(mensaje);
                 String respuesta = in.readLine();
-                client.sendMessage(respuesta);
+                return (respuesta != null) ? respuesta : "ERROR|Nodo sin respuesta";
 
             } catch (IOException e) {
-                client.sendMessage("ERROR | Nodo inalcanzable: " + e.getMessage());
-            }
-
-        } catch (NumberFormatException e) {
-            client.sendMessage("ERROR | ID de cuenta inválido.");
-        }
-    }
-    
-    int obtenerPuertoNodo(int idCuenta) {
-        for (Map.Entry<Integer, Integer> entry : mapaNodos.entrySet()) {
-            int rangoInicio = entry.getKey();
-            if (idCuenta >= rangoInicio && idCuenta < rangoInicio + 100) {
-                return entry.getValue();
+                System.out.println("Nodo en puerto " + puerto + " no disponible. Intentando siguiente...");
             }
         }
-        return -1; // No encontrado
+        return "ERROR|Ningún nodo respondió para " + claveParticion;
     }
 
-    
-    void Transferir_Fondos(String id_cuenta_origen, String id_cuenta_destino, double monto, TCPServerThread client){
-        try {
-            int idOrigen = Integer.parseInt(id_cuenta_origen);
-            int puertoNodo = obtenerPuertoNodo(idOrigen);
-            
-            if (puertoNodo == -1) {
-                client.sendMessage("ERROR | No se encuentra el nodo para cuenta de origen");
-            }
-            
-            try (Socket nodo = new Socket("localhost", puertoNodo);
-                 PrintWriter out = new PrintWriter(nodo.getOutputStream(), true);
-                 BufferedReader in = new BufferedReader(new InputStreamReader(nodo.getInputStream()))) {
-                
-                out.println("TRANSFERIR_FONDOS|" + id_cuenta_origen + "|" + id_cuenta_destino + "|" + monto);
-                String respuesta = in.readLine();
-                client.sendMessage(respuesta);
-            } catch (IOException e) {
-                client.sendMessage("ERROR | No se puede alcanzar el nodo : " + e.getMessage());
-            }
-        } catch (NumberFormatException e) {
-            client.sendMessage("ERROR | ID inválido");
-        }
+    public String obtenerClaveParticion(String tabla, String id) {
+        int numero = Integer.parseInt(id);
+        int numParticiones = obtenerNumeroDeParticiones(tabla);
+        int particion = (numero % numParticiones) + 1;
+        return tabla + "." + particion;
     }
-    
-    Map<Integer, Integer> mapaNodos = new HashMap<>();
-    
-    void inicializarMapa() {
-        mapaNodos.put(101, 6001);
-        mapaNodos.put(105, 6002);
-        mapaNodos.put(108, 6003);
+
+    public int obtenerNumeroDeParticiones(String tabla) {
+        int count = 0;
+        for (String key : mapaParticiones.keySet()) {
+            if (key.startsWith(tabla + ".")) {
+                count++;
+            }
+        }
+        System.out.println("Total particiones para " + tabla + ": " + count);
+        return count;
     }
     
 }

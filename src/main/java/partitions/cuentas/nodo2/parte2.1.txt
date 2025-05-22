@@ -1,0 +1,3 @@
+102 | 2  | 3600.50 | Corriente
+105 | 5  | 3000.00 | Ahorros
+108 | 8  | 500.00  | Corriente

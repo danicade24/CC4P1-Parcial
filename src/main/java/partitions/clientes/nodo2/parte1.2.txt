@@ -1,0 +1,4 @@
+1 | Juan Pérez     | juan@email.com      | 987654321
+4 | Ana Torres     | ana@email.com       | 922112233
+7 | Jorge Silva    | jorge@email.com     | 955556677
+10| Elena Castro   | elena@email.com     | 988889900

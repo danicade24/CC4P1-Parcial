@@ -1,2 +1,0 @@
-2 | María López    | maria@email.com     | 998877665
-7 | Jorge Silva    | jorge@email.com     | 955556677
